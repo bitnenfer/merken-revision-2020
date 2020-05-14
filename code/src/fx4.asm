@@ -32,28 +32,27 @@ fx4_loop:
 	mUpdateBackground
 
 .dont_update_background
-	ld a,[offset]
-	ld c, a
-	add a, 4
-	ld [offset], a
-	ld b, 25
+    ld a,[offset]                   ; I load the offset value
+    ld c, a                         ; I save the offset value in C for further use
+    add a, 4                        ; Increment offset
+    ld [offset], a                  ; Store the offset in memory
+    ld b, 25                        ; Prepare to wait for scanline 25
 .wait0:
-	ld a, [LY]
-	cp b
-	jr nz, .wait0
-	ld h, HIGH(sine_wave_table8)
-	ld l, b
-	ld l, a
-	add a, c
-	ld l, a
-	ld a, [hl]
-	add a, $DD
-	ld [SCY], a
-	inc b
-	ld a, b
-	cp $90
-	jr z, .end
-	jr .wait0
+    ld a, [LY]                      ; Load the current scanline
+    cp b                            ; Compare it to 25
+    jr nz, .wait0                   ; If the LCD hasn't reached it we repeat
+    ld h, HIGH(sine_wave_table8)    ; Load the high byte of the sine table address
+    add a, c                        ; Add to A (our current scanline) the offset
+    ld l, a                         ; Load L with A value
+    ld a, [hl]                      ; Load to A the value in the sine table
+    add a, $DD                      ; Add $DD to increment the displacement
+    ld [SCY], a                     ; Store our displacement in the LCD scroll Y reg
+    inc b                           ; Increment B and prepare 
+                                    ; to process the next scanline
+    ld a, b                         ; Check if the LCD scanline has reached VBLANK
+    cp $90
+    jr z, .end
+    jr .wait0                       ; If not repeat
 
 .end:
 

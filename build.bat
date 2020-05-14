@@ -15,11 +15,11 @@ rem ================================================
 rem ** THIS ARE VARIABLES THAT NEED TO BE DEFINED **
 rem ================================================
 
-set PROJECT_NAME=merken-revision2020
+set PROJECT_NAME=merken-revision-2020
 set ROOT_PATH=..\
 rem You need to install RGBDS https://github.com/rednex/rgbds
 rem and set the path here:
-set RGBDS_PATH=path\to\rgbds
+set RGBDS_PATH=\path\to\rgbds\
 rem ================================================
 rem ================================================
 
@@ -45,7 +45,7 @@ if not exist "%RGBDS_PATH%" (
 	echo ** Failed to build **
 	echo You need to install RGBDS. 
 	echo Download it from https://github.com/rednex/rgbds
-	echo and then set the path in build.bat line 23.
+	echo and then set the path in build.bat line 22.
 	exit /b -1
 )
 

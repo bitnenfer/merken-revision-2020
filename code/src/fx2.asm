@@ -113,64 +113,52 @@ fx_loop:
     call dma_transfer
     call fx_animate_text
 
-    xor a
-    ld [SCX], a
-    ld a, [wave1_offset_idx]
 
-    ld a, [offset_x]
-    inc a
-    and WAVE1_DATA_SIZE
-    ld [offset_x], a
-    ld l, a
-    ld h,HIGH(wave_data1_copy)
-    ld a, [hl]
-
-    ld d,a
-    ld a,[offset_x2]
-    inc a
-    ld [offset_x2],a
-    add a,d
-    ld d,a
-
+    xor a                           ; Reset SCX to avoid residual 
+    ld [SCX], a                     ;  offset on scroll X after prev frame
+    ld a,[offset_x2]                ; Load the scanline scroll offset
+    inc a                           ; Increment the offset
+    ld [offset_x2],a                ; Store the offset in memory
+    ld d,a                          ; Save it for future use and to avoid
+                                    ;  memory access inside hot loop
 .wait0:
     ld a,[LY]
     cp 0
-    jr nz, .wait0
-    ld b, 0
-
-    ld a, [fade_color]
-    ld [BGP], a
-
-; =======================  
+    jr nz, .wait0                   ; Wait for scanline to reset to 0
+    ld b, 0                         ; Set B to be the scanline where we will
+                                    ;  the wave displacement
+; =====================  
+; START SCANLINE EFFECT
+; =====================  
 .test_limit:
     ld a,[LY]
-    cp 110
-    jr z, .next
-    jr nc, .next
-.wait_ly:
-    ld a,[LY]
-    cp b
-    jr c, .wait_ly
-    add a, d
-    and WAVE1_DATA_SIZE
+    cp 110                          ; Check if we've reached the bottom of
+    jr z, .next                     ;  the effect which is a couple of pixels
+    jr nc, .next                    ;  before VBLANK.
+.wait_ly:                           ; If we haven't we wait for 
+    ld a,[LY]                       ;  the scanline to be equal to B
+    cp b                            ;  our target scanline for displacement
+    jr c, .wait_ly                  ;  stall until LY == B
+    add a, d                        ; To the current scanline we add the scroll offset
+    and WAVE1_DATA_SIZE             ; Mask the value so we don't overflow the table
     ld l, a
     ld h,HIGH(wave_data1_copy)
-    ld a, [hl]
-    add a, d
-    ld [SCX], a
-    ld a, e
-    ld h,HIGH(wave_data2_copy)
-    ld a, [hl]
+    ld a, [hl]                      ; Load to A the value of the offset address in the table
+    add a, d                        ; Add the offset so we can do scrolling + displacement
+    ld [SCX], a                     ; Store it in the LCD scroll X register.
+    ld h,HIGH(wave_data2_copy)      ; Do the same thing but with a different wave table
+    ld a, [hl]                      ;  on the LCD scroll Y register. 
     add a, 50
-    ld [SCY], a
-    ld e, a
-    inc b
+    ld [SCY], a                     
+    inc b                           ; Increment B an prepare for the next scanline
     jr .test_limit
-
 .next:
+; =====================  
     xor a
     ld [SCX], a
     ld [SCY], a
+    ld a, [fade_color]
+    ld [BGP], a
     ld a, [current_state]
     cp STATE_END_FX
     ret z

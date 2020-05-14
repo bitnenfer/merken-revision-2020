@@ -113,54 +113,43 @@ fx5_loop:
     ; Set Black BG
     ; ld a,%01100000
 
-
-    ld e,HIGH(wave_table)
-
-LINE equ 40
-    ld b,LINE
-
-    ; Wait for scanline 50
+    ld a, [scroll_x]
+    ld c, a                     ; Save x scroll value for use inside the cylinder
+    ld e,HIGH(wave_table)       ; Save the high byte of the wave table address
+    ld b,40                     ; The cylinder effect starts at scanline 40
 .wait_ly40:
     ld a,[LY]
     cp b
-    jr nz,.wait_ly40
-
-    ld a, [fade_line]
-    ld [BGP], a
+    jr nz,.wait_ly40            ; Wait for scanline 40
+    ld a, [fade_line]           
+    ld [BGP], a                 ; Set background palette to the first fade color
     ld a, [LCDC]
     res 3, a
-    ld [LCDC], a
+    ld [LCDC], a                ; Swap background map to $9800-$9BFF
     ld a,c
-    ld [SCX],a
-    ld a, b
-    ; wait for scanline B
+    ld [SCX],a                  ; Set LCD scroll X register to our save X scroll
+    ld a, b                     
 .wait_ly:
     ld a,[LY]
     cp a,b
-    jr nz,.wait_ly
-
-    ld h,e
-    ld a,[hl]
-    add a,d
-    ld [SCY],a
-    ; ld a, [fade_color]
-    ; ld h, a
+    jr nz,.wait_ly              ; Wait for the scanline to be equal to B
+    ld h,e                      ; Set H to the high byte of the wave table addr.
+    ld a,[hl]                   
+    add a,d                     ; D holds the Y scroll so we add that to our displacement
+    ld [SCY],a                  ; Store it in the LCD scroll Y register
     ld h,HIGH(fade_table1)
-    ld a,[hl]
-    ld [BGP],a
-
+    ld a,[hl]                   ; Apply the palette for that current scanline so
+    ld [BGP],a                  ; we can make a fading effect along the cylinder
     inc l
     inc b
     ld a,b
-    cp a,LINE + 59
+    cp a, 99                    ; The effect should only be run until scanline 99
     jr nz,.wait_ly
-
     ld a,$ff
-    ld [BGP],a
-
+    ld [BGP],a                  ; We reset the background palette
     ld a, [LCDC]
     set 3, a
-    ld [LCDC], a
+    ld [LCDC], a                ; Swap background map to $9C00-$9FFF
 
     ld a, [wait_scroll]
     dec a

@@ -33,6 +33,7 @@ fx1::
     cp $01
     jr nz, .not_dmg
     
+    ; Load a copy of the Nintendo logo because I am lazy.
 .is_dmg:
     mSetROMBank 2
     mSafeVRAMMemcpy nintendo_map, $9800, nintendo_map_size
@@ -52,21 +53,20 @@ rept 120
     mWaitVBlank
 endr
 
-    ; set line to load
-    ld [sp_save], sp
-    ld sp, SAVE_STACK
-    ld de, logo_map_end-32
-    ld hl, $9A20
-    push hl
+    ld [sp_save], sp            ; Save the original Stack Pointer
+    ld sp, SAVE_STACK           ; Set the Stack Pointer to $C400 (temporary stack)
+    ld de, logo_map_end-32      ; Set the end of the logo map
+                                ; We do this because we're loading backwards.
+    ld hl, $9A20                ; Set the starting point for loading our tiles
+    push hl                     ; Push both pointers to our temporary stack
     push de
-    ld a, [sp_save]
+    ld a, [sp_save]             
     ld l, a
     ld a, [sp_save+1]
     ld h, a
-    ld sp, hl
-
-    ld a,[SCY]
-    dec a
+    ld sp, hl                   ; Restore the original Stack Pointer
+    ld a,[SCY]                  ; We decrement SCY by one and turn it to $FF.
+    dec a                       
     ld [SCY],a
 
     ld a,%11100100
@@ -175,20 +175,20 @@ endr
     ld [fx_counter], a
 
 .load_line:
-    ld a, [wait_for_scroll]
-    cp $01
-    jr z, .end_load_line
-    ld [sp_save], sp
-    ld sp, SAVE_STACK - 4
-    pop de
-    pop hl
-    ld a, h
-    cp $96
-    jr z, .skip_store
-    ld bc, 20
-    mSetROMBank 2
-    call safe_vram_memcpy
-    ld bc,-32
+    ld a, [wait_for_scroll]         ; We need to check if 
+    cp $01                          ; we have to skip loading
+    jr z, .end_load_line            ; a line of tiles or not.
+    ld [sp_save], sp                ; If not store original Stack Pointer
+    ld sp, SAVE_STACK - 4           ; Set Stack Pointer to temporary stack
+    pop de                          ; Pop source address (Logo tile map)
+    pop hl                          ; Pop destination address (VRAM tile map)
+    ld a, h                         
+    cp $96                          
+    jr z, .skip_store               ; Do a small bound check so we don't overflow
+    ld bc, 20                       ; Set the amount of bytes we want to load
+    mSetROMBank 2                   ; Our source tile indices are stored in BANK 2
+    call safe_vram_memcpy           ; Copy tiles indices to VRAM.
+    ld bc,-32                       ; Prepare our next source and destination addresses
     add hl,bc
     push hl
     ld h, d
@@ -196,16 +196,16 @@ endr
     add hl,bc
     ld d, h
     ld e, l
-    push de
+    push de                         ; Push new source and destination into temp stack.
 .skip_store:
     ld a, [sp_save]
     ld l, a
     ld a, [sp_save+1]
     ld h, a
-    ld sp, hl
-    ld a, [loaded_line]
+    ld sp, hl                       ; Restore original Stack Pointer
+    ld a, [loaded_line]             
     inc a
-    ld [loaded_line], a
+    ld [loaded_line], a             ; Increment and save the loaded map line 
 .end_load_line:
     ret
 
@@ -214,7 +214,7 @@ on_load_complete:
 
 section "Fx1Data", ROMX, BANK[2]
 logo_data: incbin "assets/logo.td"
-logo_map incbin "assets/logo.tm"
+logo_map: incbin "assets/logo.tm"
 logo_map_end:
 gotas_data: incbin "assets/gotas.td"
 gotas_map: incbin "assets/gotas.tm"

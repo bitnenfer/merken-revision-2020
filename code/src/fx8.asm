@@ -109,47 +109,44 @@ fx8_loop:
 run_fx:
 
 .render_frame:
-    ld a,[current_frame]
-    ld d,a
-    ld a,[current_frame+1]
+    ld a,[current_frame]        ; Frames are 16 bit addresses to tilemaps
+    ld d,a                      
+    ld a,[current_frame+1]      ; So we load the high and low bytes into DE
     ld e,a
-    ld hl,$9C00
-    ld c,18
+    ld hl,$9C00                 ; Set the start VRAM address to write
+    ld c,18                     ; Set C to 18. C will be our counter
 .render_line:
-    mSetROMBank 4
+    mSetROMBank 4               ; First we set the ROM bank to 4 
     rept 20
-    ld a,[de]
-    ld [hl+],a
+    ld a,[de]                   ; Unroll this loop that loads
+    ld [hl+],a                  ; a line of tilemap indices into VRAM
     inc de
     endr
     dec c
     ld a,c
-    ld [temp_y],a
-    ld bc,$000C
-    add hl,bc
-    ld a,[temp_y]
-    ld c,a
-    jr nz,.render_line
-
-    ld a,[frames_rendered]
-    inc a
-    ld [frames_rendered],a
-    and $03
-    jr nz,.render_frame
-
+    ld [temp_y],a               ; Decrement our counter C and save it
+    ld bc,$000C                 ; Offset the WRAM write address by $0C
+    add hl,bc                   ; because the total tiles in the map are 32
+    ld a,[temp_y]   
+    ld c,a                      ; Restore our counter in C
+    jr nz,.render_line          ; If the counter isn't 0 repeat .render_line
+    ld a,[frames_rendered]      
+    inc a                       
+    ld [frames_rendered],a      ; This will act as a delay for rendering 
+    and $03                     ; the next frame
+    jr nz,.render_frame         ; if we render everything too fast it looks bad
 .change_frame:
-    ld a,[current_index]
-    inc a
-    and %111111
+    ld a,[current_index]        ; Here we change to the next frame
+    inc a                       ; We increment the current frame index
+    and %111111                 ; Mask it so we don't overflow the frame list
     ld [current_index],a
-    ld h,high(frame_list)
-    rl a
+    ld h,high(frame_list)       ; Load high byte for the address of the frame list
+    rl a                        ; Use the frame index as low byte but multiply by 2
     ld l,a
-    ld a,[hl+]
+    ld a,[hl+]                  ; Store new frame low byte address
     ld [current_frame+1],a
     ld a,[hl+]
-    ld [current_frame],a
-
+    ld [current_frame],a        ; Store new frame high byte address
     mWaitVBlank
 
 	ret

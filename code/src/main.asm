@@ -87,33 +87,26 @@ entry_point:
 ; Check we're running on DMG-CPUs
 ; Accumulator should be $11 on CBG or AGB
     cp $11
-    jp z, .not_dmg
-; Second check because we need to be sure
-    ld a,[$FF6C]
-    bit 0, a
-    jp z, .not_dmg 
-    jr .is_dmg
+    jr nz, .is_dmg
 ; =======================================
-.not_dmg:
+;   jp not_dmg ; <-- Uncomment this to allow only DMG
     xor a
     jr .start    
+
 .is_dmg:
     ld a, 1
-    jr .start
+
 .start:
-    ld [is_dmg],a
-    ld sp, STACK_TOP
+    ld [is_dmg],a           ; Store a 1 or 0 to indicate if the system is DMG.
+    ld sp, STACK_TOP        ; Set Stack Pointer
+    ld a, %11100100          
+    ld [fade_color], a      ; Set initial fade color to default gradient
+    call init_dma           ; Load DMA subroutine to HRAM
+    call dma_transfer       ; Initialize OAM to 0
+    mInitializeMusic        ; Initialize Music
+    mSelectSong 0           ; Initialize Song
 
-    mInitializeMusic
-    mSelectSong 0
-
-    ld a, %11100100
-    ld [fade_color], a
-
-    call init_dma
-    call dma_transfer
-    mStartMusic
-demo_run:
+.demo_run:
     call fx1
     call fx3
     call fx4
@@ -123,19 +116,9 @@ demo_run:
     call fx8
     call fx9
     call fx5 ;<-- The end
-
-loop:
-
-    mUpdateMusic; Play music for ever :3
-.waitvb:
-    ld a,[LY]
-    cp $90
-    jr nz, .waitvb
     
-    jp loop ; -- the end --
-
-    ; Repeat ??
-    jp demo_run
+; =======================================
+; =======================================
 
 stall::
     ld a, $FF
@@ -214,7 +197,7 @@ fx_animate_text:
     ld a, [text_wave]
     ld b, a
     ld d, 100 ; origin y pos
-    ld e, (dmg_str-dmg_str-1); <- char count
+    ld e, (end_dmg_str-dmg_str-1); <- char count
     ld a, [text_wave]
     add a, 5
     ld [text_wave], a
@@ -252,6 +235,7 @@ fx_animate_text:
 
 section "DMG", ROM0
 dmg_str: incbin "assets/dmg.str"
+end_dmg_str:
 
 section "SineWaveTable8", ROM0, ALIGN[8]
 sine_wave_table8::

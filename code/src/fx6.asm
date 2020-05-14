@@ -114,32 +114,28 @@ run_fx:
 .dont_increment_water:
 
     ld a,%11100100
-    ld [BGP],a
-
+    ld [BGP],a                  ; Set the background palette to default gradient
     xor a
     ld [SCX],a
-    ld [SCY],a
-
-    ; Vertical wave movement
-    ld a,[water_y]
+    ld [SCY],a                  ; Reset LCD's scroll X and Y registers.
+    ld a,[water_y]              ; Load water Y offset which handles the top wave
     inc a
-    and TABLE_SIZE
-    ld [water_y],a
+    and TABLE_SIZE              ; Increment and mask it so it doesn't overflow
+    ld [water_y],a              ; Store it in memory
     ld hl,wave
     add a,l
     ld l,a
-    ld a,[hl]
-    ld c,a
-    ld a,[control_y]
+    ld a,[hl]                   ; Use this offset to retrieve a wave value
+    ld c,a                      ; Move it to C so it can be added to the 
+    ld a,[control_y]            ;  water Y position. (control_y)    
     add a,c
-    ld b,a
+    ld b,a                      ; Add it and save it in B for scanline check
 .waity0:
     ld a,[LY]
     cp b
-    jr nz,.waity0
-    ld a,%10010000
-    ld [BGP],a
-
+    jr nz,.waity0               ; Wait for scanline to be equal to B
+    ld a,%10010000              ; Once we've reached the scanline == B
+    ld [BGP],a                  ; We set the background palette to a light color
     ; Horizontal wave movement
 .repeat_hwave:
     ld a,[LY]
@@ -151,7 +147,6 @@ run_fx:
     ld a,[LY]
     cp b
     jr nz,.waity1
-
     ; apply effect
     ld l,a
     ld a,[water_x]
@@ -162,14 +157,11 @@ run_fx:
     ld [SCX],a
     sub a, 10
     ld [SCY],a
-
     jr .repeat_hwave
-
 .end_horizontal_wave:
     ld a,[water_x]
     inc a
     ld [water_x],a
-
     ret
 
 section "WaveDatafx6", ROM0, ALIGN[8]
